@@ -38,6 +38,11 @@ namespace GameplayCore {
   class Beatmap <<Entity>>  {
     +notes : Note[*]
     +bpm : BPM
+    +energyEnvelope : EnergyEnvelope
+    +beatTimeline : BeatTimeline
+    +spectralCentroidSeq : SpectralCentroidSeq
+    +keyProgression : KeyProgression
+    +segments : Segments
     +createdAt : DateTime
   }
 
@@ -100,6 +105,28 @@ namespace GameplayCore {
     +isValid() : bool
   }
 
+  ' ----- Analysis Result Value Objects -----
+  class EnergyEnvelope <<ValueObject>> {
+    +values : float[*]
+  }
+
+  class BeatTimeline <<ValueObject>> {
+    +beatsMs : int[*]
+  }
+
+  class SpectralCentroidSeq <<ValueObject>> {
+    +values : float[*]
+  }
+
+  class KeyProgression <<ValueObject>> {
+    +keys : string[*]
+  }
+
+  class Segments <<ValueObject>> {
+    +labels : string[*]
+    +startsSec : float[*]
+  }
+
   class BPM <<ValueObject>>  {
     +value : int
   }
@@ -111,11 +138,44 @@ namespace GameplayCore {
 
   ' ====== Relationships ==============================================
   GameSession --> "1" Track
+
+  ' ====== Infrastructure/Adapter Layer (#US-001, #US-002) =============
+  class AudioAnalysisAdapter <<Service>> {
+    +analyse(url : Url) : BPM
+    +timeoutMs : int
+    +onTimeout() : void
+    ' Audio MS へのgRPC呼び出し。失敗時はWASM fallbackを返す
+  }
+
+  class RedisSessionRepository <<Repository>> {
+    +save(session : GameSession) : void
+    +findById(id : UUID) : GameSession?
+    +delete(id : UUID) : void
+  }
+
+  note right of RedisSessionRepository
+    実装詳細:
+    - TTL=900秒
+    - MessagePackシリアライズ
+  end note
+
+  ' ====== Session End/QUIT (#US-001, #US-004) =========================
+  GameSession : +end() : void
+  ' セッション終了・スコア確定・一時データ削除
+
+  ' ====== Relationships ==============================================
+  GameSession ..> RedisSessionRepository : 永続/削除
+  BeatmapGenerator ..> AudioAnalysisAdapter : BPM解析
   GameSession --> "1" Beatmap
   GameSession --> "*" HitResult
   GameSession --> "1" RandomSeed
 
   Beatmap "1" --> "*" Note
+  Beatmap --> EnergyEnvelope
+  Beatmap --> BeatTimeline
+  Beatmap --> SpectralCentroidSeq
+  Beatmap --> KeyProgression
+  Beatmap --> Segments
 
   BeatmapGenerator ..> Track : uses
   BeatmapGenerator ..> RandomSeed
@@ -129,6 +189,15 @@ namespace GameplayCore {
 
   SessionRepository ..> GameSession
   SeedRepository ..> RandomSeed
+
+  ' ====== Retry Handler (#NF-01) ==========================================
+  class RetryHandler <<Service>> {
+    +maxAttempts : int
+    +backoffMs : int
+    +execute(fn) : <T>
+  }
+  VisualEffectEngine ..> RetryHandler : uses
+  ' 汎用リトライ・フェイルオーバー制御 (#NF-01)
 
 }
 

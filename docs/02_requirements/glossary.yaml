@@ -3,6 +3,14 @@
 - term: URL
   definition: インターネット上のリソースを示す文字列。ここでは YouTube 動画リンクを指す。
 
+- term: Beatmap
+  definition: リズムゲームでプレイヤーが入力すべきタイミング・属性を保持する譜面データ。ノート配列・BPM・セグメント等を含むJSON形式。
+
+- term: ScoreSheet
+  deprecated: true
+  use: Beatmap
+  definition: (旧称) Beatmapに統一。今後は使用しないこと。
+
 - term: 譜面
   definition: リズムゲームでプレイヤーが入力すべきタイミングを示すノートの集合。
 
@@ -25,3 +33,9 @@
 
 - term: 演出
   definition: 背景エフェクト・色調・カメラワークなど視覚的効果の総称。曲調分析に応じて動的に変化する。
+
+- term: 基調色
+  definition: プレイ時の背景や UI の主色となる色。ユーザが曲のイメージとして選択する。
+
+- term: カラーイメージ
+  definition: 楽曲やユーザの感情を色で表現した概念。基調色選択で指定する。

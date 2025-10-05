@@ -1,0 +1,35 @@
+@startuml
+' ==========================================================
+' Class Diagram — Beatmap Seed Management & ReplayService
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+package "Infrastructure" {
+  class BeatmapSeedRepository <<Repository>> {
+    +persistSeed(sessionId: UUID, seed: string): void
+    +fetchSeed(sessionId: UUID): string
+    +getLatest(userId: UUID, url: string): string
+  }
+  class ReplayService <<Service>> {
+    +getSeed(replayId: UUID): string
+    +persistSeed(sessionId: UUID, seed: string): void
+  }
+}
+
+class Session {
+  +sessionId: UUID
+  +beatmapSeed: string
+}
+
+BeatmapSeedRepository ..> Session : persist/fetch
+ReplayService ..> BeatmapSeedRepository
+ReplayService ..> Session
+
+note right of ReplayService
+  #US-003, #ADR-0004
+  - リプレイ時に同一BeatmapSeedを返却
+  - 永続先はRedisまたはMemory
+end note
+
+@enduml

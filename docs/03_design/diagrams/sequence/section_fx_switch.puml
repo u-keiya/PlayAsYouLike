@@ -1,0 +1,25 @@
+@startuml
+' ==========================================================
+' Sequence Diagram — Section FX Switch (Chorus Detection)
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+actor User <<Persona>>
+participant WebSPA
+participant AudioAnalysisSvc
+participant FXEngine
+participant WebGPU
+
+User -> WebSPA: プレイ開始
+WebSPA -> AudioAnalysisSvc: 事前解析リクエスト
+AudioAnalysisSvc --> WebSPA: セグメント情報 (サビ等)
+WebSPA -> FXEngine: applyPreset(intro)
+' ... 省略 ...
+AudioAnalysisSvc -> FXEngine: SectionChange{type: chorus}
+FXEngine -> WebGPU: applyPreset(highEnergy)
+
+note right: #US-005, #ADR-0004\nサビ等のセクション変化で演出切替
+
+== SLA制約 ==
+' <<constraint>> 事前解析: 300秒以内 / セクション切替: 1秒以内
+
+@enduml

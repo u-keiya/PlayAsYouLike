@@ -30,14 +30,16 @@ USDM IDs: US-001, US-002, US-003, US-004, US-005
    * 役割: YouTube メタ取得、譜面シード生成、セッション管理  
    * WebSocket による結果 Push を後方互換で追加可能  
 3. **音声解析マイクロサービス**: Python + librosa
-   * BPM やエネルギーを抽出
+   * BPM / RMS / Spectral Centroid / Key / 曲構造セグメントなど多特徴量を抽出
    * gRPC で API コンパクト化
    * WASM 版をフロント fallback として用意 (US-005 Realtime 演出)
    * **Fallback時の重複解析防止策**:
-     - Pythonサービスが過負荷時は「analysis-pending」ステータスとETA（推定完了時刻）を返却し、フロントエンドは即座にWASMへフォールバックせず待機する。
-     - バックエンドはセッションごとにキャッシュキーを発行し、WASM側も同じキーを利用して解析結果の一貫性を担保する。
-     - この設計により、同一セッションでの二重解析やBPM/シード値の不整合を防止する。
-4. **インメモリキャッシュ**: Redis
+     - Python サービスが過負荷時は「analysis-pending」ステータスと ETA（推定完了時刻）を返却し、フロントは即座に WASM へフォールバックせず待機
+     - バックエンドはセッションごとにキャッシュキーを発行し、WASM 側も同じキーを利用して解析結果の一貫性を担保
+4. **FX Engine**: Three.js + GLSL / WebGPU
+   * ユーザ選択色と音楽特徴量を uniform にバインドし、プロシージャルシェーダでオブジェクトを動的再生成
+   * `Scene.clear()`+`Geometry.dispose()` により曲間でモデルを入れ替え、リプレイでも同一演出を再現
+5. **インメモリキャッシュ**: Redis
    * 直前プレイのランダムシードと 15 分以内のセッションデータを保持  
    * Persistence を持たずシンプル運用  
 5. **外部サービス**: YouTube Data / Streaming  

@@ -1,16 +1,81 @@
-openapi: 3.1.0
+openapi: "3.1.0"
 info:
   title: PlayAsYouLike Backend API
-  version: 0.1.0-draft
+  version: 1.0.0
+  x-release-status: stable     # ← 安定版マーカー
   description: |
-    API skeleton covering US-001〜US-004 endpoints.
+    API skeleton covering US-001〜US-006 endpoints.
     All payload examples and schemas are **draft** and subject to refinement.
+    
+    技術選定: MessageBroker=Apache Kafka, ExternalStreaming=gRPC (see ADR-0002, ADR-0004)
+security:
+  - BearerAuth: []
 servers:
   - url: https://api.playasul.local
 paths:
+  /sessions/{id}/state:
+    patch:
+      summary: Update session state (#US-004, #ADR-0004)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              oneOf:
+                - required: [state]
+                  properties:
+                    state:
+                      type: string
+                      enum: [running, ended]
+                    colorHex:
+                      type: string
+                      pattern: '^#[0-9A-Fa-f]{6}$'
+                      description: "Optional: base color for session"
+                - required: [state, pausedAt]
+                  properties:
+                    state:
+                      type: string
+                      enum: [paused]
+                    pausedAt:
+                      type: integer
+                      description: "必須: state=paused時の一時停止タイムスタンプ(ms)"
+                    colorHex:
+                      type: string
+                      pattern: '^#[0-9A-Fa-f]{6}$'
+                      description: "Optional: base color for session"
+              properties:
+                state:
+                  type: string
+                  enum: [running, paused, ended]
+                pausedAt:
+                  type: integer
+                  description: "Optional: timestamp (ms) when paused"
+                colorHex:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  description: "Optional: base color for session"
+      responses:
+        '204':
+          description: Updated
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid session state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /metadata:
     get:
       summary: Fetch track metadata (#US-002)
+      x-latency-ms: 3000  # ≤3 s SLA (#US-002)
       parameters:
         - name: url
           in: query
@@ -30,9 +95,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '503':
+          description: Upstream YouTube API timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /effects/presets:
+    get:
+      summary: Get available visual effect presets (#US-005)
+      description: |
+        利用可能な VisualEffectPreset 一覧を取得する。拡張性のため、将来のパラメータ追加に備え後方互換を維持。
+        - SLA: 10分以内に返却
+      x-latency-ms: 600000  # ≤10分 SLA (#US-005)
+      responses:
+        '200':
+          description: 一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [presets]
+                properties:
+                  presets:
+                    type: array
+                    maxItems: 10
+                    items:
+                      $ref: '#/components/schemas/VisualEffectPreset'
+        '503':
+          description: プリセット生成タイムアウト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /sessions:
     post:
       summary: Create new game session (#US-001)
+      x-latency-ms: 300000  # ≤300 s SLA (#US-001)
       requestBody:
         required: true
         content:
@@ -48,6 +147,12 @@ paths:
                 $ref: '#/components/schemas/SessionCreateResponse'
         '422':
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Beatmap generation timeout
           content:
             application/json:
               schema:
@@ -69,6 +174,7 @@ paths:
   /sessions/{id}/resume:
     patch:
       summary: Resume paused session (#US-004)
+      x-latency-ms: 3000  # ≤3 s SLA (#US-004)
       parameters:
         - $ref: '#/components/parameters/SessionId'
       responses:
@@ -76,6 +182,89 @@ paths:
           description: Session resumed
         '404':
           description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sessions/{id}/end:
+    patch:
+      summary: End session and finalize score (#US-001, #US-004)
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session ended and score finalized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  finalScore:
+                    type: integer
+                  accuracy:
+                    type: number
+                    format: float
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '408':
+          description: Session end timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /effects/presets/select:
+    post:
+      summary: Select visual effect preset (#US-005, #US-006, #ADR-0004)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [presetId]
+              properties:
+                presetId:
+                  type: string
+                  pattern: '^color-([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+                  description: |
+                    3桁または6桁HEXの基調色指定（例: color-FF6699, color-abc）
+                    - 大文字小文字不問
+                    - 既存presetIdとの命名衝突回避のため color- で始まるIDは予約
+                colorHex:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  description: "Optional: base color for session"
+      responses:
+        '200':
+          description: Preset selected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  presetId:
+                    type: string
+                  appliedColor:
+                    type: string
+                    pattern: '^#[0-9A-Fa-f]{6}$'
+        '404':
+          description: Session or preset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
           content:
             application/json:
               schema:
@@ -94,7 +283,122 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /replay/{id}:
+    get:
+      summary: Get replay data (#US-003, #US-004, #ADR-0004)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Replay data found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  replayId:
+                    type: string
+                    format: uuid
+                  beatmapSeed:
+                    type: string
+                    description: "Seed used for beatmap generation (for deterministic replay) #US-003"
+                  beatmap:
+                    $ref: '#/components/schemas/Beatmap'
+                  score:
+                    type: integer
+                  accuracy:
+                    type: number
+                  colorHex:
+                    type: string
+                    pattern: '^#[0-9A-Fa-f]{6}$'
+                  createdAt:
+                    type: string
+                    format: date-time
+        '404':
+          description: Replay not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: Replay deleted (gone)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '451':
+          description: Replay unavailable due to copyright restriction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /effects/sync:
+    get:
+      summary: Re-sync effect timing (#RQ02-3)
+      parameters:
+        - name: clientTime
+          in: query
+          required: true
+          schema:
+            type: integer
+            description: Client-side playback time (ms)
+      responses:
+        '200':
+          description: Sync info returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  correctedOffset:
+                    type: integer
+                    description: Offset to apply (ms)
+        '400':
+          description: Invalid clientTime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /ws/hit-judge:
+    get:
+      summary: WebSocket endpoint for real-time hit judge (#US-003)
+      description: |
+        WebSocket サブプロトコル:  
+        - send: PlayerInput  
+        - receive: HitResult, Warning(type="lag", threshold=200)
+      responses:
+        '101':
+          description: Switching Protocols (WebSocket upgrade)
+  /ws/effectPreset:
+    get:
+      summary: WebSocket endpoint for effect preset push (#US-005, #US-006)
+      description: |
+        WebSocket サブプロトコル:
+        - receive: effectPreset {presetId, params}
+        # Example (server→client)
+        # {
+        #   "presetId": "rainbow",
+        #   "params": {
+        #     "intensity": 0.8,
+        #     "durationMs": 5000,
+        #     "hueShift": 120
+        #   }
+        # }
+        受信メッセージのスキーマは components/schemas/EffectPresetMessage を参照。
+      responses:
+        '101':
+          description: Switching Protocols (WebSocket upgrade)
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   parameters:
     SessionId:
       name: id
@@ -104,13 +408,280 @@ components:
         type: string
         format: uuid
   schemas:
+    # --- WebSocket Event Schema for EffectPreset Push ---
+    EffectPresetMessage: # x-usdm-id: "US-005", x-adr-id: "0005"
+      oneOf:
+        - required: [schemaVersion, presetId, params]
+          properties:
+            schemaVersion:
+              type: string
+              default: "1.0"
+              description: メッセージスキーマ SemVer (major 不一致で互換性警告)
+            presetId:
+              type: string
+              const: rainbow
+              description: VisualEffectPreset.id を指定
+            params:
+              $ref: '#/components/schemas/RainbowParams'
+        - required: [schemaVersion, presetId, params]
+          properties:
+            schemaVersion:
+              type: string
+              default: "1.0"
+              description: メッセージスキーマ SemVer (major 不一致で互換性警告)
+            presetId:
+              type: string
+              const: flash
+              description: VisualEffectPreset.id を指定
+            params:
+              $ref: '#/components/schemas/FlashParams'
+        - required: [schemaVersion, presetId, params]
+          properties:
+            schemaVersion:
+              type: string
+              default: "1.0"
+              description: メッセージスキーマ SemVer (major 不一致で互換性警告)
+            presetId:
+              type: string
+              const: wave
+              description: VisualEffectPreset.id を指定
+            params:
+              $ref: '#/components/schemas/WaveParams'
+        - required: [schemaVersion, presetId, params]
+          properties:
+            schemaVersion:
+              type: string
+              default: "1.0"
+              description: メッセージスキーマ SemVer (major 不一致で互換性警告)
+            presetId:
+              type: string
+              const: sparkle
+              description: VisualEffectPreset.id を指定
+            params:
+              $ref: '#/components/schemas/SparkleParams'
+        - required: [schemaVersion, presetId, params]
+          properties:
+            schemaVersion:
+              type: string
+              default: "1.0"
+              description: メッセージスキーマ SemVer (major 不一致で互換性警告)
+            presetId:
+              type: string
+              const: blur
+              description: VisualEffectPreset.id を指定
+            params:
+              $ref: '#/components/schemas/BlurParams'
+      discriminator:
+        propertyName: presetId
+        mapping:
+          rainbow: '#/components/schemas/EffectPresetMessage/oneOf/0'
+          flash:   '#/components/schemas/EffectPresetMessage/oneOf/1'
+          wave:    '#/components/schemas/EffectPresetMessage/oneOf/2'
+          sparkle: '#/components/schemas/EffectPresetMessage/oneOf/3'
+          blur:    '#/components/schemas/EffectPresetMessage/oneOf/4'
+      example:
+        schemaVersion: "1.0"
+        presetId: "rainbow"
+        params:
+          intensity: 0.8
+          durationMs: 5000
+          hueShift: 120
+
+    RainbowParams:
+      type: object
+      required: [intensity, durationMs, hueShift]
+      properties:
+        intensity:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+        durationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 5000
+        hueShift:
+          type: integer
+          minimum: 0
+          maximum: 360
+          default: 120
+          description: "色相シフト量"
+        saturation:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 1.0
+          description: "彩度"
+      example:
+        intensity: 0.8
+        durationMs: 5000
+        hueShift: 120
+        saturation: 1.0
+
+    FlashParams:
+      type: object
+      required: [intensity, durationMs, flashRate, colorHex]
+      properties:
+        intensity:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+        durationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 5000
+        flashRate:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 8
+          description: "フラッシュ周波数 (Hz)"
+        colorHex:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          default: "#FFFFFF"
+          description: "フラッシュ色"
+      example:
+        intensity: 0.7
+        durationMs: 3000
+        flashRate: 10
+        colorHex: "#FF6699"
+
+    WaveParams:
+      type: object
+      required: [intensity, durationMs, wavelength, amplitude, speed]
+      properties:
+        intensity:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+        durationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 5000
+        wavelength:
+          type: integer
+          minimum: 10
+          maximum: 200
+          default: 80
+          description: "波長 (px)"
+        amplitude:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+          description: "振幅 (px)"
+        speed:
+          type: integer
+          minimum: 10
+          maximum: 500
+          default: 120
+          description: "波の進行速度 (px/s)"
+      example:
+        intensity: 0.6
+        durationMs: 4000
+        wavelength: 100
+        amplitude: 30
+        speed: 150
+
+    SparkleParams:
+      type: object
+      required: [intensity, durationMs, density, colorPalette]
+      properties:
+        intensity:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+        durationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 5000
+        density:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.4
+          description: "密度"
+        colorPalette:
+          type: array
+          items:
+            type: string
+            pattern: '^#[0-9A-Fa-f]{6}$'
+          maxItems: 10
+          default: ["#FFD700", "#FFFFFF"]
+          description: "カラーパレット"
+      example:
+        intensity: 0.7
+        durationMs: 5000
+        density: 0.5
+        colorPalette: ["#FFD700", "#FFFFFF"]
+
+    BlurParams:
+      type: object
+      required: [intensity, durationMs, radius]
+      properties:
+        intensity:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.7
+        durationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 5000
+        radius:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 12
+          description: "ぼかし半径 (px)"
+      example:
+        intensity: 0.7
+        durationMs: 2000
+        radius: 15
+
+    # --- WebSocket Event Schema for Session State Push ---
+    SessionStateChangedEvent:
+      type: object
+      description: "WebSocket event: session state changed"
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [running, paused, ended]
+        pausedAt:
+          type: integer
+        colorHex:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        updatedAt:
+          type: string
+          format: date-time
     Url:
       type: string
       format: uri
       description: YouTube video URL
     UrlMetadata:
       type: object
-      required: [title, durationSec, trimmed]
+      required:
+        - title
+        - durationSec
+        - trimmed
       properties:
         title:
           type: string
@@ -129,6 +700,35 @@ components:
       properties:
         bpm:
           type: integer
+        energyEnvelope:
+          type: array
+          items:
+            type: number
+            format: float
+        beatTimeline:
+          type: array
+          items:
+            type: integer
+            description: Beat timestamps in ms
+        spectralCentroidSeq:
+          type: array
+          items:
+            type: number
+            format: float
+        keyProgression:
+          type: array
+          items:
+            type: string
+        segments:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              startSec:
+                type: number
+                format: float
         notes:
           type: array
           items:
@@ -140,16 +740,27 @@ components:
                 type: integer
     SessionCreateRequest:
       type: object
-      required: [url]
+      required:
+        - url
+        - colorHex
       properties:
         url:
           $ref: '#/components/schemas/Url'
+        colorHex:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: UI theme primary color in HEX (\#RRGGBB)
         seed:
           type: integer
           description: Optional replay seed
     SessionCreateResponse:
       type: object
-      required: [sessionId, beatmap, audioUrl]
+      required:
+        - sessionId
+        - beatmap
+        - audioUrl
+        - effectsPreset
+        - presets
       properties:
         sessionId:
           type: string
@@ -159,11 +770,160 @@ components:
         audioUrl:
           type: string
           format: uri
+        effectsPreset:
+          $ref: '#/components/schemas/VisualEffectPreset'
+        presets:
+          type: array
+          description: >
+            利用可能な VisualEffectPreset 一覧（最大10件、SLA: 10分以内返却） #US-005
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/VisualEffectPreset'
+    VisualEffectPreset:
+      type: object
+      description: |
+        Visual effect preset selected based on music features (#US-005)
+        - SLA: 10分以内に返却されること
+        - 拡張性: パラメータ追加時は後方互換を維持
+      required:
+        - id
+        - name
+        - baseColorHex
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        baseColorHex:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        particleIntensity:
+          type: number
+          format: float
+        cameraShake:
+          type: number
+          format: float
+        bgShader:
+          type: string
     Error:
       type: object
-      required: [code, message]
+      required:
+        - code
+        - message
       properties:
         code:
           type: string
+          enum:
+            - INVALID_URL
+            - NOT_FOUND
+            - TIMEOUT
+            - RATE_LIMIT
+            - VALIDATION_ERROR
+            - INTERNAL_ERROR
+            - REPLAY_GONE
+            - REPLAY_LEGAL
+            - JUDGE_LAG
         message:
           type: string
+        detail:
+          type: string
+          description: Optional error detail for debugging
+      examples:
+        - summary: Timeout
+          value:
+            code: TIMEOUT
+            message: "Beatmap generation timed out"
+        - summary: Rate limit
+          value:
+            code: RATE_LIMIT
+            message: "Too many requests. Please try again later."
+        - summary: Not found
+          value:
+            code: NOT_FOUND
+            message: "Session or resource not found"
+        - summary: Validation error
+          value:
+            code: VALIDATION_ERROR
+            message: "Invalid input"
+        - summary: Internal error
+          value:
+            code: INTERNAL_ERROR
+            message: "Unexpected server error"
+        - summary: Replay gone
+          value:
+            code: REPLAY_GONE
+            message: "Replay deleted"
+        - summary: Replay legal
+          value:
+            code: REPLAY_LEGAL
+            message: "Replay unavailable due to copyright restriction"
+        - summary: Judge lag
+          value:
+            code: JUDGE_LAG
+            message: "Hit judge delayed"
+    # --- WebSocket Event Schema for Hit Judge ---
+    PlayerInput: # x-usdm-id: "US-004", x-adr-id: "0004"
+      type: object
+      required: [timestamp, lane, action]
+      properties:
+        timestamp:
+          type: integer
+          description: "入力時刻 (ms, クライアント基準)"
+        lane:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: "レーン番号 (0-3)"
+        action:
+          type: string
+          enum: [hit, hold, release]
+          description: "入力アクション"
+      example:
+        timestamp: 123456
+        lane: 2
+        action: hit
+
+    HitResult: # x-usdm-id: "US-004", x-adr-id: "0004"
+      type: object
+      required: [timestamp, lane, result, score]
+      properties:
+        timestamp:
+          type: integer
+          description: "判定時刻 (ms, サーバ基準)"
+        lane:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: "レーン番号 (0-3)"
+        result:
+          type: string
+          enum: [perfect, good, miss]
+          description: "判定結果"
+        score:
+          type: integer
+          description: "加算スコア"
+      example:
+        timestamp: 123457
+        lane: 2
+        result: perfect
+        score: 300
+
+    Warning: # x-usdm-id: "US-004", x-adr-id: "0004"
+      type: object
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          enum: [lag, invalid_input]
+          description: "警告種別"
+        message:
+          type: string
+          description: "警告内容"
+        threshold:
+          type: integer
+          description: "閾値 (ms, type=lag時のみ)"
+      example:
+        type: lag
+        message: "判定遅延が発生"
+        threshold: 200
+

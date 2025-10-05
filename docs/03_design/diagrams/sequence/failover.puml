@@ -1,0 +1,37 @@
+@startuml
+' ==============================================================
+' Sequence Diagram — Failover & Retry Policy (#NF-01 可用性)
+' ==============================================================
+actor User as user <<Persona>>
+participant "Web SPA\n(React)"            as spa
+participant "Backend API\nFastify"        as api
+database    "Redis\nPrimary"              as redis1
+database    "Redis\nSecondary"            as redis2
+participant "RetryHandler\n(Service)"     as retry
+
+== 通常リクエスト ==
+spa -> api : GET /api/effectPreset
+api -> redis1 : GET preset
+redis1 --> api : 200 OK
+api --> spa : 200 OK
+
+== Redis Primary 障害発生 ==
+spa -> api : GET /api/effectPreset
+api -> retry : execute(() => redis1.get())
+retry -> redis1 : GET preset
+redis1 -[#red;x]-> retry : ConnectionError
+alt retry ≤ 3 times
+  retry -> redis1 : GET preset (retry)
+  redis1 -[#red;x]-> retry : ConnectionError
+else retries exhausted & succeed on secondary
+  retry -> redis2 : GET preset (failover)
+  redis2 --> retry : 200 OK
+  retry --> api : preset
+  api --> spa : 200 OK (from secondary)
+else all failed
+  retry --> api : throws
+  api --> spa : 503 Service Unavailable
+end
+
+' 備考: RetryHandler クラスは core_domain で定義
+@enduml

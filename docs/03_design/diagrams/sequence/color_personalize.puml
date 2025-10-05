@@ -1,0 +1,28 @@
+@startuml
+' ==========================================================
+' Sequence Diagram — Color Personalize (PresetId: color-XXXXXX)
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+actor User
+participant WebSPA
+participant API
+participant FXEngine
+
+User -> WebSPA: URL+基調色選択→Play
+WebSPA -> API: POST /effects/presets/select {presetId: color-FF6699, colorHex: #FF6699}
+alt 有効なcolorHex形式
+    API -> FXEngine: applyPreset(color-FF6699, #FF6699)
+    FXEngine --> API: OK
+    API --> WebSPA: 200 OK {preset selected}
+else 無効なcolorHex
+    API --> WebSPA: 422 VALIDATION_ERROR
+    WebSPA -> User: エラーメッセージ表示
+else FXEngine エラー
+    FXEngine --> API: ERROR
+    API --> WebSPA: 500 INTERNAL_ERROR
+    WebSPA -> User: エラーメッセージ表示
+end
+
+note right: #US-006, #ADR-0004\n基調色はPresetId拡張＋colorHexで指定
+
+@enduml

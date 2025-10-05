@@ -11,6 +11,7 @@ database    "YouTube\nData API"         as yt
 user -> spa : 入力欄にURL貼付け + 「Fetch」クリック
 
 spa -> api : GET /metadata?url={url}  #US-002
+' <<constraint>> GET /metadata: 3秒以内応答
 
 api -> yt  : YouTube oEmbed /videos.list\n(url)
 yt  --> api : {title, durationSec}

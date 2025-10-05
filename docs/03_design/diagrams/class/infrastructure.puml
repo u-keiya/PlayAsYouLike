@@ -1,0 +1,58 @@
+@startuml
+' ==========================================================
+' Infrastructure Layer Class Diagram — Adapter/Infra (#NF-01, #US-006)
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+' ------------ Legend -------------------------------------------------
+'  <<Repository>>    : 永続化インタフェース
+'  <<Cache>>         : キャッシュ層
+'  <<MessageBroker>> : 非同期メッセージ基盤
+'  <<Gateway>>       : 外部サービス連携
+'  USDM Tag          : 参照要件 ( など)
+' ---------------------------------------------------------------------
+
+namespace Infrastructure {
+
+  class EffectPresetRepository <<Repository>> {
+    +save(preset : VisualEffectPreset) : void
+    +findById(id : string) : VisualEffectPreset?
+  }
+
+  class SessionCache <<Cache>> {
+    +save(session : GameSession) : void
+    +findById(id : UUID) : GameSession?
+    +delete(id : UUID) : void
+    +ttlSec : int
+  }
+
+  class EventBus <<MessageBroker>> {
+    +publish(event : DomainEvent) : void
+    +subscribe(topic : string, handler) : void
+    +brokers : string[]
+    ' 実装: Apache Kafka (#ADR-0002)
+  }
+
+  class ExternalStreamingGateway <<Gateway>> {
+    +fetchTrackMeta(trackId : string) : TrackMeta
+    +streamAudio(trackId : string) : AudioStream
+    ' 実装: gRPC (#ADR-0003)
+  }
+
+  ' 関連
+  EffectPresetRepository ..> SessionCache : uses
+  SessionCache ..> EventBus : publishes
+  EventBus ..> ExternalStreamingGateway : notifies
+
+  ' RetryHandler 参照
+  SessionCache ..> RetryHandler : uses
+
+ ' RetryHandler スタブ
+ class RetryHandler <<Service>> {
+   +execute(fn, retries:int=3): any
+ }
+
+}
+
+@enduml

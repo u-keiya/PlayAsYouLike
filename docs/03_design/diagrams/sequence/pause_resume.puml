@@ -10,6 +10,7 @@ database    "Redis\nSession Cache"        as cache
 == ポーズ ==
 user -> spa : 「Pause」キー押下
 spa -> spa : 再生・ノート描画を一時停止\n内部タイマー停止
+' <<constraint>> PATCH /sessions/{id}/pause: 3秒以内応答
 spa -> api : PATCH /sessions/{id}/pause  #US-004
 api -> cache : UPDATE session:{id}.status = PAUSED
 api --> spa : 204 No Content
@@ -18,11 +19,28 @@ spa -> user : ポーズメニュー表示
 == リジューム ==
 user -> spa : 「Resume」選択
 spa -> user : 3,2,1 カウントダウン表示
+' <<constraint>> PATCH /sessions/{id}/resume: 3秒以内応答
 spa -> api : PATCH /sessions/{id}/resume
 api -> cache : UPDATE session:{id}.status = RUNNING
 api --> spa : 204 No Content
 spa -> spa : タイマー同期補正・再生再開
 spa -> user : プレイ再開
+
+== タイムアウト自動終了 ==
+alt resume within 10 min
+  ' 何もしない
+else idle > ${PAUSE_TIMEOUT_MIN} min <<#RQ05-2>>
+note right : デフォルト: 10分\n設定可能な値
+  spa -> api : POST /sessions/{id}/stop (reason=timeout)
+  alt session exists
+    api -> cache : UPDATE session:{id}.status = STOPPED
+    api --> spa : 204 No Content
+    spa -> user : セッション終了通知・トップページへ遷移
+  else session not found
+    api --> spa : 404 NOT_FOUND
+    spa -> user : セッション期限切れ通知・トップページへ遷移
+  end
+end
 
 == 中断終了 ==
 user -> spa : 「Quit」選択

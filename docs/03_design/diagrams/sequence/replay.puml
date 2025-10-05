@@ -1,0 +1,36 @@
+@startuml
+' ==============================================================
+' Sequence Diagram — Replay Flow (#US-003)
+' PlayAsYouLike Web Rhythm Game
+' ==============================================================
+actor User as user <<Persona>>
+participant "Web SPA\n(React)"            as spa
+participant "Backend API\nFastify"        as api
+database    "Redis\nSession Cache"        as cache
+participant "BeatmapGenerator\n(Service)" as gen
+
+== リザルト画面 ==
+user -> spa : 「Replay」ボタン押下
+
+== API リクエスト ==
+spa -> api : POST /sessions\n{url, seed}  #US-003
+
+alt Seed キャッシュ整合性確認
+    api -> cache : GET seed:{url}
+    cache --> api : RandomSeed
+else キャッシュ未命中
+    note over api: キャッシュ未命中の場合は\n生成済み Seed を使用しない
+end
+
+== 譜面生成 ==
+api -> gen : generateBeatmap(url, seed)
+gen --> api : Beatmap
+
+== セッション登録 ==
+api -> cache : SET session:{id}=GameSession [TTL 15m]
+
+api --> spa : 201 Created\n{sessionId, beatmap, audioUrl}
+
+== 新セッション開始 ==
+spa -> user : プレイ画面へ遷移・再挑戦開始
+@enduml

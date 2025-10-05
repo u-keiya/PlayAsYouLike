@@ -1,0 +1,25 @@
+@startuml
+' ==========================================================
+' Sequence Diagram — Replay with Same Beatmap Seed
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+actor User
+participant WebSPA
+participant API
+participant ReplayService
+participant BeatmapSeedRepository
+participant BeatmapGenerator
+
+User -> WebSPA: Replayボタン押下
+WebSPA -> API: GET /replay/{id}
+API -> ReplayService: getSeed(replayId)
+ReplayService -> BeatmapSeedRepository: fetchSeed(replayId)
+BeatmapSeedRepository --> ReplayService: beatmapSeed
+ReplayService --> API: beatmapSeed
+API --> WebSPA: { beatmapSeed }
+WebSPA -> BeatmapGenerator: generate(beatmapSeed)
+BeatmapGenerator --> WebSPA: Beatmap
+
+note right: #US-003, #ADR-0004\n同一Seedで譜面再現
+
+@enduml

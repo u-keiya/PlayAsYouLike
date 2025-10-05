@@ -11,6 +11,7 @@ Person(user, "ライトゲーマー")
 System_Boundary(playAsUL, "PlayAsYouLike Web Rhythm Game") {
 
     Container(webspa, "Web SPA", "TypeScript / React", "URL入力・ゲームUI・譜面描画・WebAudio再生をブラウザで実行")
+    Container(fx, "FX Engine", "Three.js / GLSL / WebGPU", "ユーザ選択色と音楽特徴量からリアルタイム演出を生成")
     Container(api, "Backend API", "Node.js (Fastify)", "YouTubeメタ取得・譜面シード生成・セッション管理")
     ContainerDb(cache, "In-Memory Cache", "Redis", "直近シード & 臨時セッションデータ (≤15分) を保持")
     Container(audioSvc, "Audio Analysis Microservice", "Python + librosa", "BPM / エネルギー解析")
@@ -25,5 +26,6 @@ Rel(api, cache, "シード & 一時データ保存", "RESP")
 Rel(api, audioSvc, "音声解析オフロード", "gRPC")
 Rel(api, youtube, "動画メタデータ取得", "HTTPS")
 Rel_R(webspa, audioSvc, "BPM解析 (fallback WASM)", "WebAssembly (client-side)")
+Rel(webspa, fx, "周波数・特色データ", "in-memory")
 
 @enduml

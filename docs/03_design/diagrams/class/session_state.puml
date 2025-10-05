@@ -1,0 +1,35 @@
+@startuml
+' ==========================================================
+' Class Diagram — Session State Management
+' PlayAsYouLike Web Rhythm Game
+' ==========================================================
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+class Session {
+  +sessionId: UUID
+  +state: SessionState
+  +pause(): void
+  +resume(): void
+  +end(): void
+}
+
+class SessionStateMachine <<Service>> {
+  +transition(current: SessionState, event: string): SessionState
+}
+
+enum SessionState {
+  running
+  paused
+  ended
+}
+
+Session ..> SessionState
+Session ..> SessionStateMachine
+
+note right of Session
+  #US-004, #ADR-0004
+  - 状態遷移はAPI/WSで一元管理
+  - 不正遷移は422エラー
+end note
+
+@enduml
