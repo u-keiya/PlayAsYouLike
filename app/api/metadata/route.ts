@@ -88,10 +88,17 @@ async function fetchFromNoembed(url: string, signal: AbortSignal): Promise<UrlMe
     throw new Error("noembed payload did not include title");
   }
 
-  const durationSec =
-    typeof payload.duration === "number" && Number.isFinite(payload.duration)
-      ? Math.max(0, Math.round(payload.duration))
-      : 0;
+  const rawDuration = payload.duration;
+  let durationSec = 0;
+
+  if (typeof rawDuration === "number" && Number.isFinite(rawDuration)) {
+    durationSec = Math.max(0, Math.round(rawDuration));
+  } else if (typeof rawDuration === "string") {
+    const parsed = Number(rawDuration);
+    if (Number.isFinite(parsed)) {
+      durationSec = Math.max(0, Math.round(parsed));
+    }
+  }
 
   return {
     title: payload.title,
