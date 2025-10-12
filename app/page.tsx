@@ -1,8 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 export const TUTORIAL_STORAGE_KEY = "play-as-you-like:tutorial-seen:v1";
+
+type UrlMetadata = {
+  title: string;
+  durationSec: number;
+  trimmed: boolean;
+};
+
+const METADATA_TIMEOUT_MS = 3000;
 
 const tutorialSteps = [
   {
@@ -24,6 +39,134 @@ const tutorialSteps = [
 
 export default function HomePage() {
   const [isTutorialOpen, setTutorialOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [metadata, setMetadata] = useState<UrlMetadata | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const metadataRequestControllerRef = useRef<AbortController | null>(null);
+  const latestRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      metadataRequestControllerRef.current?.abort();
+    };
+  }, []);
+
+  const formatDuration = useCallback((durationSec: number) => {
+    if (!Number.isFinite(durationSec) || durationSec < 0) {
+      return "-";
+    }
+
+    const minutes = Math.floor(durationSec / 60);
+    const seconds = durationSec % 60;
+
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }, []);
+
+  const handleUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setUrl(event.target.value);
+    setErrorMessage(null);
+    setMetadata(null);
+  };
+
+  const fetchMetadata = useCallback(async (targetUrl: string) => {
+    const trimmedUrl = targetUrl.trim();
+
+    if (!trimmedUrl) {
+      setErrorMessage("YouTube の URL を入力してください。");
+      setMetadata(null);
+      return;
+    }
+
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+
+    metadataRequestControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    metadataRequestControllerRef.current = controller;
+
+    let didTimeout = false;
+    const timeoutId = window.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, METADATA_TIMEOUT_MS);
+
+    setIsFetchingMetadata(true);
+    setErrorMessage(null);
+    setMetadata(null);
+
+    try {
+      const response = await fetch(
+        `/api/metadata?url=${encodeURIComponent(trimmedUrl)}`,
+        {
+          method: "GET",
+          signal: controller.signal,
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof (payload as { message?: unknown })?.message === "string"
+            ? (payload as { message: string }).message
+            : "メタデータの取得に失敗しました。";
+
+        setErrorMessage(message);
+        return;
+      }
+
+      setMetadata(payload as UrlMetadata);
+    } catch (error) {
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        if (didTimeout) {
+          setErrorMessage(
+            "3 秒以内にメタデータを取得できませんでした。再度お試しください。",
+          );
+        }
+        return;
+      }
+
+      setErrorMessage("メタデータの取得中にエラーが発生しました。");
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (requestId === latestRequestIdRef.current) {
+        setIsFetchingMetadata(false);
+        metadataRequestControllerRef.current = null;
+      }
+    }
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+
+      if (!form.reportValidity()) {
+        return;
+      }
+
+      await fetchMetadata(url);
+    },
+    [fetchMetadata, url],
+  );
 
   const persistTutorialSeen = useCallback(() => {
     if (typeof window === "undefined") {
@@ -74,6 +217,8 @@ export default function HomePage() {
     setTutorialOpen(true);
   };
 
+  const isPlayEnabled = Boolean(metadata) && !isFetchingMetadata;
+
   return (
     <div className="app">
       <header className="app__header">
@@ -100,7 +245,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="app__form">
+          <form className="app__form" onSubmit={handleSubmit} noValidate>
             <label className="app__label" htmlFor="youtube-url">
               YouTube URL
             </label>
@@ -111,14 +256,61 @@ export default function HomePage() {
               type="url"
               autoComplete="off"
               aria-describedby="url-help-text"
+              value={url}
+              onChange={handleUrlChange}
+              required
             />
             <p id="url-help-text" className="app__hint">
-              300 秒以内に譜面生成が完了し、自動でプレイ画面に切り替わります。
+              入力後に「Fetch」でメタデータを取得し、「Play」でプレイ体験に進めます。
             </p>
-            <button type="button" className="app__primary-action">
-              Play
-            </button>
-          </div>
+            <div className="app__actions">
+              <button
+                type="submit"
+                className="app__secondary-action"
+                disabled={isFetchingMetadata}
+              >
+                {isFetchingMetadata ? "Fetching..." : "Fetch"}
+              </button>
+              <button
+                type="button"
+                className="app__primary-action"
+                disabled={!isPlayEnabled}
+                aria-disabled={!isPlayEnabled}
+              >
+                Play
+              </button>
+            </div>
+            <div
+              className="app__status"
+              aria-live="polite"
+              aria-busy={isFetchingMetadata}
+            >
+              {isFetchingMetadata ? (
+                <p className="app__status-text">メタデータを取得しています…</p>
+              ) : null}
+              {metadata ? (
+                <dl className="app__metadata">
+                  <div className="app__metadata-row">
+                    <dt>タイトル</dt>
+                    <dd>{metadata.title}</dd>
+                  </div>
+                  <div className="app__metadata-row">
+                    <dt>長さ</dt>
+                    <dd>{formatDuration(metadata.durationSec)}</dd>
+                  </div>
+                  <div className="app__metadata-row">
+                    <dt>トリミング</dt>
+                    <dd>{metadata.trimmed ? "あり" : "なし"}</dd>
+                  </div>
+                </dl>
+              ) : null}
+              {errorMessage ? (
+                <p className="app__error" role="alert">
+                  {errorMessage}
+                </p>
+              ) : null}
+            </div>
+          </form>
         </section>
       </main>
 
