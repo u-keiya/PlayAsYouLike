@@ -30,6 +30,7 @@ const FALLBACK_METADATA: Record<string, UrlMetadata> = {
 
 const REQUEST_TIMEOUT_MS = 2800;
 const NOEMBED_ENDPOINT = "https://noembed.com/embed";
+const MAX_VIDEO_DURATION_SEC = 10 * 60;
 
 function getErrorResponse(body: ErrorBody, status: number) {
   return NextResponse.json(body, {
@@ -179,6 +180,22 @@ async function fetchDurationFromYoutube(
   return null;
 }
 
+function applyDurationPolicy(metadata: UrlMetadata): UrlMetadata {
+  const sanitizedDuration = Number.isFinite(metadata.durationSec)
+    ? Math.max(0, Math.round(metadata.durationSec))
+    : 0;
+  const shouldTrim =
+    metadata.trimmed || sanitizedDuration > MAX_VIDEO_DURATION_SEC;
+
+  return {
+    ...metadata,
+    durationSec: shouldTrim
+      ? Math.min(sanitizedDuration, MAX_VIDEO_DURATION_SEC)
+      : sanitizedDuration,
+    trimmed: shouldTrim,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const urlParam = request.nextUrl.searchParams.get("url");
 
@@ -235,7 +252,9 @@ export async function GET(request: NextRequest) {
         metadata.durationSec = fallbackDuration;
       }
     }
-    return NextResponse.json(metadata, {
+    const normalizedMetadata = applyDurationPolicy(metadata);
+
+    return NextResponse.json(normalizedMetadata, {
       headers: {
         "Cache-Control": "no-store",
       },
@@ -256,7 +275,8 @@ export async function GET(request: NextRequest) {
     const fallback = FALLBACK_METADATA[videoId];
     if (fallback) {
       clearTimeout(timeoutId);
-      return NextResponse.json(fallback, {
+      const normalizedFallback = applyDurationPolicy(fallback);
+      return NextResponse.json(normalizedFallback, {
         headers: {
           "Cache-Control": "no-store",
           "X-Metadata-Source": "fallback",
