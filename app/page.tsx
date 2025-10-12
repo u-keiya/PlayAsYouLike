@@ -69,92 +69,89 @@ export default function HomePage() {
     setMetadata(null);
   };
 
-  const fetchMetadata = useCallback(
-    async (targetUrl: string) => {
-      const trimmedUrl = targetUrl.trim();
+  const fetchMetadata = useCallback(async (targetUrl: string) => {
+    const trimmedUrl = targetUrl.trim();
 
-      if (!trimmedUrl) {
-        setErrorMessage("YouTube の URL を入力してください。");
-        setMetadata(null);
+    if (!trimmedUrl) {
+      setErrorMessage("YouTube の URL を入力してください。");
+      setMetadata(null);
+      return;
+    }
+
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+
+    metadataRequestControllerRef.current?.abort();
+
+    const controller = new AbortController();
+    metadataRequestControllerRef.current = controller;
+
+    let didTimeout = false;
+    const timeoutId = window.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, METADATA_TIMEOUT_MS);
+
+    setIsFetchingMetadata(true);
+    setErrorMessage(null);
+    setMetadata(null);
+
+    try {
+      const response = await fetch(
+        `/api/metadata?url=${encodeURIComponent(trimmedUrl)}`,
+        {
+          method: "GET",
+          signal: controller.signal,
+        },
+      );
+
+      let payload: unknown = null;
+
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (requestId !== latestRequestIdRef.current) {
         return;
       }
 
-      const requestId = latestRequestIdRef.current + 1;
-      latestRequestIdRef.current = requestId;
+      if (!response.ok) {
+        const message =
+          typeof (payload as { message?: unknown })?.message === "string"
+            ? (payload as { message: string }).message
+            : "メタデータの取得に失敗しました。";
 
-      metadataRequestControllerRef.current?.abort();
-
-      const controller = new AbortController();
-      metadataRequestControllerRef.current = controller;
-
-      let didTimeout = false;
-      const timeoutId = window.setTimeout(() => {
-        didTimeout = true;
-        controller.abort();
-      }, METADATA_TIMEOUT_MS);
-
-      setIsFetchingMetadata(true);
-      setErrorMessage(null);
-      setMetadata(null);
-
-      try {
-        const response = await fetch(
-          `/api/metadata?url=${encodeURIComponent(trimmedUrl)}`,
-          {
-            method: "GET",
-            signal: controller.signal,
-          },
-        );
-
-        let payload: unknown = null;
-
-        try {
-          payload = await response.json();
-        } catch {
-          payload = null;
-        }
-
-        if (requestId !== latestRequestIdRef.current) {
-          return;
-        }
-
-        if (!response.ok) {
-          const message =
-            typeof (payload as { message?: unknown })?.message === "string"
-              ? (payload as { message: string }).message
-              : "メタデータの取得に失敗しました。";
-
-          setErrorMessage(message);
-          return;
-        }
-
-        setMetadata(payload as UrlMetadata);
-      } catch (error) {
-        if (requestId !== latestRequestIdRef.current) {
-          return;
-        }
-
-        if (error instanceof DOMException && error.name === "AbortError") {
-          if (didTimeout) {
-            setErrorMessage(
-              "3 秒以内にメタデータを取得できませんでした。再度お試しください。",
-            );
-          }
-          return;
-        }
-
-        setErrorMessage("メタデータの取得中にエラーが発生しました。");
-      } finally {
-        window.clearTimeout(timeoutId);
-
-        if (requestId === latestRequestIdRef.current) {
-          setIsFetchingMetadata(false);
-          metadataRequestControllerRef.current = null;
-        }
+        setErrorMessage(message);
+        return;
       }
-    },
-    [],
-  );
+
+      setMetadata(payload as UrlMetadata);
+    } catch (error) {
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        if (didTimeout) {
+          setErrorMessage(
+            "3 秒以内にメタデータを取得できませんでした。再度お試しください。",
+          );
+        }
+        return;
+      }
+
+      setErrorMessage("メタデータの取得中にエラーが発生しました。");
+    } finally {
+      window.clearTimeout(timeoutId);
+
+      if (requestId === latestRequestIdRef.current) {
+        setIsFetchingMetadata(false);
+        metadataRequestControllerRef.current = null;
+      }
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {

@@ -63,7 +63,10 @@ function extractVideoId(inputUrl: URL): string | null {
   return null;
 }
 
-async function fetchFromNoembed(url: string, signal: AbortSignal): Promise<UrlMetadata> {
+async function fetchFromNoembed(
+  url: string,
+  signal: AbortSignal,
+): Promise<UrlMetadata> {
   const endpoint = `${NOEMBED_ENDPOINT}?url=${encodeURIComponent(url)}`;
   const response = await fetch(endpoint, {
     method: "GET",
@@ -121,7 +124,9 @@ function parseDurationFromWatchHtml(html: string): number | null {
     }
   }
 
-  const approxDurationMatch = html.match(/"approxDurationMs"\s*:\s*"?(?<millis>\d+)"?/);
+  const approxDurationMatch = html.match(
+    /"approxDurationMs"\s*:\s*"?(?<millis>\d+)"?/,
+  );
   if (approxDurationMatch?.groups?.millis) {
     const parsed = Number(approxDurationMatch.groups.millis);
     if (Number.isFinite(parsed)) {
@@ -137,7 +142,10 @@ function parseDurationFromWatchHtml(html: string): number | null {
   return null;
 }
 
-async function fetchDurationFromYoutube(videoId: string, signal: AbortSignal): Promise<number | null> {
+async function fetchDurationFromYoutube(
+  videoId: string,
+  signal: AbortSignal,
+): Promise<number | null> {
   const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`;
 
   try {
@@ -215,8 +223,15 @@ export async function GET(request: NextRequest) {
   try {
     const metadata = await fetchFromNoembed(urlParam, controller.signal);
     if (metadata.durationSec === 0) {
-      const fallbackDuration = await fetchDurationFromYoutube(videoId, controller.signal);
-      if (fallbackDuration && Number.isFinite(fallbackDuration) && fallbackDuration > 0) {
+      const fallbackDuration = await fetchDurationFromYoutube(
+        videoId,
+        controller.signal,
+      );
+      if (
+        fallbackDuration &&
+        Number.isFinite(fallbackDuration) &&
+        fallbackDuration > 0
+      ) {
         metadata.durationSec = fallbackDuration;
       }
     }
@@ -231,7 +246,8 @@ export async function GET(request: NextRequest) {
       return getErrorResponse(
         {
           code: "TIMEOUT",
-          message: "上流サービスがタイムアウトしました。時間をおいて再度お試しください。",
+          message:
+            "上流サービスがタイムアウトしました。時間をおいて再度お試しください。",
         },
         503,
       );
