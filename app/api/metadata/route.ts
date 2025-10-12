@@ -107,6 +107,70 @@ async function fetchFromNoembed(url: string, signal: AbortSignal): Promise<UrlMe
   } satisfies UrlMetadata;
 }
 
+function parseDurationFromWatchHtml(html: string): number | null {
+  const lengthMatch = html.match(/"lengthSeconds"\s*:\s*"?(?<seconds>\d+)"?/);
+  if (lengthMatch?.groups?.seconds) {
+    const parsed = Number(lengthMatch.groups.seconds);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  } else if (lengthMatch) {
+    const parsed = Number(lengthMatch[1]);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  const approxDurationMatch = html.match(/"approxDurationMs"\s*:\s*"?(?<millis>\d+)"?/);
+  if (approxDurationMatch?.groups?.millis) {
+    const parsed = Number(approxDurationMatch.groups.millis);
+    if (Number.isFinite(parsed)) {
+      return Math.round(parsed / 1000);
+    }
+  } else if (approxDurationMatch) {
+    const parsed = Number(approxDurationMatch[1]);
+    if (Number.isFinite(parsed)) {
+      return Math.round(parsed / 1000);
+    }
+  }
+
+  return null;
+}
+
+async function fetchDurationFromYoutube(videoId: string, signal: AbortSignal): Promise<number | null> {
+  const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`;
+
+  try {
+    const response = await fetch(watchUrl, {
+      method: "GET",
+      signal,
+      headers: {
+        "User-Agent": "PlayAsYouLike/1.0 (+https://playasul.local)",
+        Accept: "text/html",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const html = await response.text();
+    const duration = parseDurationFromWatchHtml(html);
+
+    if (duration && duration > 0) {
+      return duration;
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    // Ignore non-abort errors: upstream watch page might be throttled, but we still have metadata.
+  }
+
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const urlParam = request.nextUrl.searchParams.get("url");
 
@@ -150,6 +214,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const metadata = await fetchFromNoembed(urlParam, controller.signal);
+    if (metadata.durationSec === 0) {
+      const fallbackDuration = await fetchDurationFromYoutube(videoId, controller.signal);
+      if (fallbackDuration && Number.isFinite(fallbackDuration) && fallbackDuration > 0) {
+        metadata.durationSec = fallbackDuration;
+      }
+    }
     return NextResponse.json(metadata, {
       headers: {
         "Cache-Control": "no-store",
