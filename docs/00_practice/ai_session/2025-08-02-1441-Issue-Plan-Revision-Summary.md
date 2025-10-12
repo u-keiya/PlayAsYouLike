@@ -1,7 +1,9 @@
 ## Summary
+
 本セッションでは、設計一式（docs/03_design 配下）を read_file で精読後、実装プラン docs/04_dev/issues.md を USDM・ADR・OpenAPI と突き合わせてレビューし、齟齬と抜け漏れを是正した。特に Session State の API 統一、EffectPresetMessage スキーマと関連 API/WS/テストの整備、Kafka/gRPC 周りの Issue 追加、FX 周辺の粒度調整を実施。Summary Table も更新し、依存関係・見積の妥当化を行った。
 
 ### User Requirement
+
 - US-001: 初回チュートリアル、即プレイ開始
 - US-002: URL メタ取得 ≤3秒
 - US-003: ランダム譜面生成＋同一シードでリプレイ
@@ -10,6 +12,7 @@
 - US-006: 基調色パーソナライズ
 
 ### Key Decisions
+
 - Session State API を ADR-0004 に合わせて PATCH /sessions/{id}/state に統一（UI/Backend/Contract Test まで反映） [ADR-0004](docs/03_design/adr/0004-beatmap-seed-replay-and-session-state.md)
 - EffectPreset Push スキーマ（EffectPresetMessage）を JSON Schema と Contract Test で明確化 [ADR-0005](docs/03_design/adr/0005-effect-preset-message-schema.md)
 - /effects/presets（SLA ≤10分、最大10件）と /effects/sync（補正）をバックログへ追加し、API/テスト整備 [openapi.yaml](docs/03_design/api/openapi.yaml)
@@ -20,6 +23,7 @@
 - docs: openapi.yaml 更新の見積を 2pt に引き上げ、対象スコープを拡充（/effects/presets, /sessions/{id}/state, Error 追加）
 
 ### Action Items
+
 - [x] docs/04_dev/issues.md の修正適用（API 統一・新規 Issue 追加・粒度調整・依存更新） (IP)
 - [ ] test(contract): `/sessions/{id}/state`、`/effects/presets`、`/ws/effectPreset` 追加 (TE)
 - [ ] feat(backend): `/effects/presets` 実装＋Contract Test (Dev)
@@ -29,8 +33,9 @@
 - [ ] docs: openapi.yaml & ADR-0005 反映（preset parameter table 同期） (DS/DD)
 
 ### References
+
 - USDM: US-001〜US-006（docs/02_requirements/usdm/）
-- ADR: 
+- ADR:
   - [0002 Kafka 採用](docs/03_design/adr/0002-message-broker-kafka.md)
   - [0003 外部ストリーミング gRPC](docs/03_design/adr/0003-external-streaming-grpc.md)
   - [0004 Seed リプレイ保証／Session State 統合](docs/03_design/adr/0004-beatmap-seed-replay-and-session-state.md)

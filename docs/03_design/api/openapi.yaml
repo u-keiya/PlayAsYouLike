@@ -2,11 +2,11 @@ openapi: "3.1.0"
 info:
   title: PlayAsYouLike Backend API
   version: 1.0.0
-  x-release-status: stable     # ← 安定版マーカー
+  x-release-status: stable # ← 安定版マーカー
   description: |
     API skeleton covering US-001〜US-006 endpoints.
     All payload examples and schemas are **draft** and subject to refinement.
-    
+
     技術選定: MessageBroker=Apache Kafka, ExternalStreaming=gRPC (see ADR-0002, ADR-0004)
 security:
   - BearerAuth: []
@@ -17,7 +17,7 @@ paths:
     patch:
       summary: Update session state (#US-004, #ADR-0004)
       parameters:
-        - $ref: '#/components/parameters/SessionId'
+        - $ref: "#/components/parameters/SessionId"
       requestBody:
         required: true
         content:
@@ -32,7 +32,7 @@ paths:
                       enum: [running, ended]
                     colorHex:
                       type: string
-                      pattern: '^#[0-9A-Fa-f]{6}$'
+                      pattern: "^#[0-9A-Fa-f]{6}$"
                       description: "Optional: base color for session"
                 - required: [state, pausedAt]
                   properties:
@@ -44,7 +44,7 @@ paths:
                       description: "必須: state=paused時の一時停止タイムスタンプ(ms)"
                     colorHex:
                       type: string
-                      pattern: '^#[0-9A-Fa-f]{6}$'
+                      pattern: "^#[0-9A-Fa-f]{6}$"
                       description: "Optional: base color for session"
               properties:
                 state:
@@ -55,61 +55,61 @@ paths:
                   description: "Optional: timestamp (ms) when paused"
                 colorHex:
                   type: string
-                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  pattern: "^#[0-9A-Fa-f]{6}$"
                   description: "Optional: base color for session"
       responses:
-        '204':
+        "204":
           description: Updated
-        '404':
+        "404":
           description: Session not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '422':
+                $ref: "#/components/schemas/Error"
+        "422":
           description: Invalid session state transition
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /metadata:
     get:
       summary: Fetch track metadata (#US-002)
-      x-latency-ms: 3000  # ≤3 s SLA (#US-002)
+      x-latency-ms: 3000 # ≤3 s SLA (#US-002)
       parameters:
         - name: url
           in: query
           required: true
           schema:
-            $ref: '#/components/schemas/Url'
+            $ref: "#/components/schemas/Url"
       responses:
-        '200':
+        "200":
           description: Valid URL; metadata returned
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UrlMetadata'
-        '400':
+                $ref: "#/components/schemas/UrlMetadata"
+        "400":
           description: Invalid or unsupported URL
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '503':
+                $ref: "#/components/schemas/Error"
+        "503":
           description: Upstream YouTube API timeout
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /effects/presets:
     get:
       summary: Get available visual effect presets (#US-005)
       description: |
         利用可能な VisualEffectPreset 一覧を取得する。拡張性のため、将来のパラメータ追加に備え後方互換を維持。
         - SLA: 10分以内に返却
-      x-latency-ms: 600000  # ≤10分 SLA (#US-005)
+      x-latency-ms: 600000 # ≤10分 SLA (#US-005)
       responses:
-        '200':
+        "200":
           description: 一覧取得成功
           content:
             application/json:
@@ -121,78 +121,78 @@ paths:
                     type: array
                     maxItems: 10
                     items:
-                      $ref: '#/components/schemas/VisualEffectPreset'
-        '503':
+                      $ref: "#/components/schemas/VisualEffectPreset"
+        "503":
           description: プリセット生成タイムアウト
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /sessions:
     post:
       summary: Create new game session (#US-001)
-      x-latency-ms: 300000  # ≤300 s SLA (#US-001)
+      x-latency-ms: 300000 # ≤300 s SLA (#US-001)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SessionCreateRequest'
+              $ref: "#/components/schemas/SessionCreateRequest"
       responses:
-        '201':
+        "201":
           description: Session created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SessionCreateResponse'
-        '422':
+                $ref: "#/components/schemas/SessionCreateResponse"
+        "422":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '503':
+                $ref: "#/components/schemas/Error"
+        "503":
           description: Beatmap generation timeout
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /sessions/{id}/pause:
     patch:
       summary: Pause running session (#US-004)
       parameters:
-        - $ref: '#/components/parameters/SessionId'
+        - $ref: "#/components/parameters/SessionId"
       responses:
-        '204':
+        "204":
           description: Session paused
-        '404':
+        "404":
           description: Session not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /sessions/{id}/resume:
     patch:
       summary: Resume paused session (#US-004)
-      x-latency-ms: 3000  # ≤3 s SLA (#US-004)
+      x-latency-ms: 3000 # ≤3 s SLA (#US-004)
       parameters:
-        - $ref: '#/components/parameters/SessionId'
+        - $ref: "#/components/parameters/SessionId"
       responses:
-        '204':
+        "204":
           description: Session resumed
-        '404':
+        "404":
           description: Session not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /sessions/{id}/end:
     patch:
       summary: End session and finalize score (#US-001, #US-004)
       parameters:
-        - $ref: '#/components/parameters/SessionId'
+        - $ref: "#/components/parameters/SessionId"
       responses:
-        '200':
+        "200":
           description: Session ended and score finalized
           content:
             application/json:
@@ -207,18 +207,18 @@ paths:
                   accuracy:
                     type: number
                     format: float
-        '404':
+        "404":
           description: Session not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '408':
+                $ref: "#/components/schemas/Error"
+        "408":
           description: Session end timeout
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /effects/presets/select:
     post:
       summary: Select visual effect preset (#US-005, #US-006, #ADR-0004)
@@ -232,17 +232,17 @@ paths:
               properties:
                 presetId:
                   type: string
-                  pattern: '^color-([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'
+                  pattern: "^color-([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
                   description: |
                     3桁または6桁HEXの基調色指定（例: color-FF6699, color-abc）
                     - 大文字小文字不問
                     - 既存presetIdとの命名衝突回避のため color- で始まるIDは予約
                 colorHex:
                   type: string
-                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  pattern: "^#[0-9A-Fa-f]{6}$"
                   description: "Optional: base color for session"
       responses:
-        '200':
+        "200":
           description: Preset selected
           content:
             application/json:
@@ -256,33 +256,33 @@ paths:
                     type: string
                   appliedColor:
                     type: string
-                    pattern: '^#[0-9A-Fa-f]{6}$'
-        '404':
+                    pattern: "^#[0-9A-Fa-f]{6}$"
+        "404":
           description: Session or preset not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '422':
+                $ref: "#/components/schemas/Error"
+        "422":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /sessions/{id}:
     delete:
       summary: Quit and delete session
       parameters:
-        - $ref: '#/components/parameters/SessionId'
+        - $ref: "#/components/parameters/SessionId"
       responses:
-        '204':
+        "204":
           description: Session deleted
-        '404':
+        "404":
           description: Session not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /replay/{id}:
     get:
       summary: Get replay data (#US-003, #US-004, #ADR-0004)
@@ -294,7 +294,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Replay data found
           content:
             application/json:
@@ -308,35 +308,35 @@ paths:
                     type: string
                     description: "Seed used for beatmap generation (for deterministic replay) #US-003"
                   beatmap:
-                    $ref: '#/components/schemas/Beatmap'
+                    $ref: "#/components/schemas/Beatmap"
                   score:
                     type: integer
                   accuracy:
                     type: number
                   colorHex:
                     type: string
-                    pattern: '^#[0-9A-Fa-f]{6}$'
+                    pattern: "^#[0-9A-Fa-f]{6}$"
                   createdAt:
                     type: string
                     format: date-time
-        '404':
+        "404":
           description: Replay not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '410':
+                $ref: "#/components/schemas/Error"
+        "410":
           description: Replay deleted (gone)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '451':
+                $ref: "#/components/schemas/Error"
+        "451":
           description: Replay unavailable due to copyright restriction
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /effects/sync:
     get:
       summary: Re-sync effect timing (#RQ02-3)
@@ -348,7 +348,7 @@ paths:
             type: integer
             description: Client-side playback time (ms)
       responses:
-        '200':
+        "200":
           description: Sync info returned
           content:
             application/json:
@@ -358,12 +358,12 @@ paths:
                   correctedOffset:
                     type: integer
                     description: Offset to apply (ms)
-        '400':
+        "400":
           description: Invalid clientTime
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
   /ws/hit-judge:
     get:
       summary: WebSocket endpoint for real-time hit judge (#US-003)
@@ -372,7 +372,7 @@ paths:
         - send: PlayerInput  
         - receive: HitResult, Warning(type="lag", threshold=200)
       responses:
-        '101':
+        "101":
           description: Switching Protocols (WebSocket upgrade)
   /ws/effectPreset:
     get:
@@ -391,7 +391,7 @@ paths:
         # }
         受信メッセージのスキーマは components/schemas/EffectPresetMessage を参照。
       responses:
-        '101':
+        "101":
           description: Switching Protocols (WebSocket upgrade)
 components:
   securitySchemes:
@@ -422,7 +422,7 @@ components:
               const: rainbow
               description: VisualEffectPreset.id を指定
             params:
-              $ref: '#/components/schemas/RainbowParams'
+              $ref: "#/components/schemas/RainbowParams"
         - required: [schemaVersion, presetId, params]
           properties:
             schemaVersion:
@@ -434,7 +434,7 @@ components:
               const: flash
               description: VisualEffectPreset.id を指定
             params:
-              $ref: '#/components/schemas/FlashParams'
+              $ref: "#/components/schemas/FlashParams"
         - required: [schemaVersion, presetId, params]
           properties:
             schemaVersion:
@@ -446,7 +446,7 @@ components:
               const: wave
               description: VisualEffectPreset.id を指定
             params:
-              $ref: '#/components/schemas/WaveParams'
+              $ref: "#/components/schemas/WaveParams"
         - required: [schemaVersion, presetId, params]
           properties:
             schemaVersion:
@@ -458,7 +458,7 @@ components:
               const: sparkle
               description: VisualEffectPreset.id を指定
             params:
-              $ref: '#/components/schemas/SparkleParams'
+              $ref: "#/components/schemas/SparkleParams"
         - required: [schemaVersion, presetId, params]
           properties:
             schemaVersion:
@@ -470,15 +470,15 @@ components:
               const: blur
               description: VisualEffectPreset.id を指定
             params:
-              $ref: '#/components/schemas/BlurParams'
+              $ref: "#/components/schemas/BlurParams"
       discriminator:
         propertyName: presetId
         mapping:
-          rainbow: '#/components/schemas/EffectPresetMessage/oneOf/0'
-          flash:   '#/components/schemas/EffectPresetMessage/oneOf/1'
-          wave:    '#/components/schemas/EffectPresetMessage/oneOf/2'
-          sparkle: '#/components/schemas/EffectPresetMessage/oneOf/3'
-          blur:    '#/components/schemas/EffectPresetMessage/oneOf/4'
+          rainbow: "#/components/schemas/EffectPresetMessage/oneOf/0"
+          flash: "#/components/schemas/EffectPresetMessage/oneOf/1"
+          wave: "#/components/schemas/EffectPresetMessage/oneOf/2"
+          sparkle: "#/components/schemas/EffectPresetMessage/oneOf/3"
+          blur: "#/components/schemas/EffectPresetMessage/oneOf/4"
       example:
         schemaVersion: "1.0"
         presetId: "rainbow"
@@ -543,7 +543,7 @@ components:
           description: "フラッシュ周波数 (Hz)"
         colorHex:
           type: string
-          pattern: '^#[0-9A-Fa-f]{6}$'
+          pattern: "^#[0-9A-Fa-f]{6}$"
           default: "#FFFFFF"
           description: "フラッシュ色"
       example:
@@ -617,7 +617,7 @@ components:
           type: array
           items:
             type: string
-            pattern: '^#[0-9A-Fa-f]{6}$'
+            pattern: "^#[0-9A-Fa-f]{6}$"
           maxItems: 10
           default: ["#FFD700", "#FFFFFF"]
           description: "カラーパレット"
@@ -668,7 +668,7 @@ components:
           type: integer
         colorHex:
           type: string
-          pattern: '^#[0-9A-Fa-f]{6}$'
+          pattern: "^#[0-9A-Fa-f]{6}$"
         updatedAt:
           type: string
           format: date-time
@@ -745,10 +745,10 @@ components:
         - colorHex
       properties:
         url:
-          $ref: '#/components/schemas/Url'
+          $ref: "#/components/schemas/Url"
         colorHex:
           type: string
-          pattern: '^#[0-9A-Fa-f]{6}$'
+          pattern: "^#[0-9A-Fa-f]{6}$"
           description: UI theme primary color in HEX (\#RRGGBB)
         seed:
           type: integer
@@ -766,19 +766,19 @@ components:
           type: string
           format: uuid
         beatmap:
-          $ref: '#/components/schemas/Beatmap'
+          $ref: "#/components/schemas/Beatmap"
         audioUrl:
           type: string
           format: uri
         effectsPreset:
-          $ref: '#/components/schemas/VisualEffectPreset'
+          $ref: "#/components/schemas/VisualEffectPreset"
         presets:
           type: array
           description: >
             利用可能な VisualEffectPreset 一覧（最大10件、SLA: 10分以内返却） #US-005
           maxItems: 10
           items:
-            $ref: '#/components/schemas/VisualEffectPreset'
+            $ref: "#/components/schemas/VisualEffectPreset"
     VisualEffectPreset:
       type: object
       description: |
@@ -796,7 +796,7 @@ components:
           type: string
         baseColorHex:
           type: string
-          pattern: '^#[0-9A-Fa-f]{6}$'
+          pattern: "^#[0-9A-Fa-f]{6}$"
         particleIntensity:
           type: number
           format: float
@@ -926,4 +926,3 @@ components:
         type: lag
         message: "判定遅延が発生"
         threshold: 200
-

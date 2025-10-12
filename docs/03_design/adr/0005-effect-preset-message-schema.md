@@ -19,19 +19,19 @@ WebSocket `/ws/effectPreset` で Push される effectPreset メッセージの�
 ## Decision
 
 - effectPreset Push メッセージは `EffectPresetMessage` スキーマ（OpenAPI components/schemas）で定義する。
-    - 必須: `presetId` (string), `params` (object)
-    - `params` は intensity (0〜1, float), durationMs (int, ms) を必須とし、preset 固有の追加プロパティは `additionalProperties: true` で許容
+  - 必須: `presetId` (string), `params` (object)
+  - `params` は intensity (0〜1, float), durationMs (int, ms) を必須とし、preset 固有の追加プロパティは `additionalProperties: true` で許容
 - 例:
-    ```json
-    {
-      "presetId": "rainbow",
-      "params": {
-        "intensity": 0.8,
-        "durationMs": 5000,
-        "hueShift": 120
-      }
+  ```json
+  {
+    "presetId": "rainbow",
+    "params": {
+      "intensity": 0.8,
+      "durationMs": 5000,
+      "hueShift": 120
     }
-    ```
+  }
+  ```
 - 後方互換性維持のため、`params` の追加プロパティは breaking change としない。
 - スキーマは OpenAPI 3.1 の components/schemas に記載し、contract テストでバリデーション可能とする。
 - 仕様の不明点（preset 固有パラメータ一覧、デフォルト値等）は Open Questions に記載し、PO/SA へエスカレーション。

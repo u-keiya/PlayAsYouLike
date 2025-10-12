@@ -6,12 +6,12 @@ This document outlines the testing strategy for the "PlayAsYouLike" project. Our
 
 ## 2. Test Layers
 
-| Layer | Tool / Framework | Location | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Acceptance (E2E)** | Gherkin (Cucumber/Behave) | `tests/e2e/` | **Validate user requirements (USDM)**. Simulates user behavior from the outside-in, ensuring the system delivers the expected value. |
-| **Contract** | Schemathesis, Pytest | `tests/contract/` | **Verify API contracts**. Automatically validates that the API implementation adheres to the `openapi.yaml` specification, including WebSocket message schemas. |
-| **Integration** | Pytest | `tests/integration/` | Test interactions between components (e.g., API server and database, service to service, **WebSocket communication**). |
-| **Unit** | Pytest | `tests/unit/` | Test individual functions, methods, or classes in isolation. Fast feedback for developers. |
+| Layer                | Tool / Framework          | Location             | Purpose                                                                                                                                                         |
+| :------------------- | :------------------------ | :------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Acceptance (E2E)** | Gherkin (Cucumber/Behave) | `tests/e2e/`         | **Validate user requirements (USDM)**. Simulates user behavior from the outside-in, ensuring the system delivers the expected value.                            |
+| **Contract**         | Schemathesis, Pytest      | `tests/contract/`    | **Verify API contracts**. Automatically validates that the API implementation adheres to the `openapi.yaml` specification, including WebSocket message schemas. |
+| **Integration**      | Pytest                    | `tests/integration/` | Test interactions between components (e.g., API server and database, service to service, **WebSocket communication**).                                          |
+| **Unit**             | Pytest                    | `tests/unit/`        | Test individual functions, methods, or classes in isolation. Fast feedback for developers.                                                                      |
 
 ## 3. Coverage Targets
 

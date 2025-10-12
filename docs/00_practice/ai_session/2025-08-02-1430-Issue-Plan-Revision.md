@@ -1,7 +1,9 @@
 ## Summary
+
 Issue プラン（docs/04_dev/issues.md）を USDM・設計（ADR/シーケンス図）・テスト戦略と突き合わせて精査し、欠落・粒度・依存関係・設計齟齬を是正する改訂を実施した。主な変更は US-001 の追加、肥大 Issue の分割、Pause/Replay/Session の実装順序の修正、Kafka publish や gRPC→FX メッセージスキーマ、WebSocket JSON schema の明記、E2E/CI の補強。全タスクを 2 ideal-days 以下の粒度に整え、Summary Table を再構成した。
 
 ### User Requirement
+
 - US-001: 初回チュートリアルとヘルプ再表示
 - US-002: YouTube メタデータ取得（3秒内表示）
 - US-003: 譜面生成・リプレイ（同一シード）
@@ -10,6 +12,7 @@ Issue プラン（docs/04_dev/issues.md）を USDM・設計（ADR/シーケン�
 - US-006: 基調色パーソナライズ
 
 ### Key Decisions
+
 - US-001 を新規追加（フロント＋E2E）。設計トレース: docs/02_requirements/usdm/US-001.yaml
 - 肥大 Issue を分割
   - 譜面生成 (#3 旧) → 「ロジック API (3pt)」と「seed↔Redis (2pt)」
@@ -29,6 +32,7 @@ Issue プラン（docs/04_dev/issues.md）を USDM・設計（ADR/シーケン�
   - CI に Redis/gRPC/WebGPU の起動手順を明記するサブタスクを追加
 
 ### Action Items
+
 - [x] docs/04_dev/issues.md を改訂（USDM・設計と整合／粒度再編）
 - [ ] docs/03_design/api/openapi.yaml を更新（US-002/003 の 422/400/429 反映）(Issue #18, role: DD/SA)
 - [ ] CI ワークフローに Redis/gRPC/WebGPU 起動を組み込み（Issue #22, role: Dev/TE）
@@ -37,6 +41,7 @@ Issue プラン（docs/04_dev/issues.md）を USDM・設計（ADR/シーケン�
 - [ ] WebSocket JSON schema の docs 追補（新規、role: DD）
 
 ### References
+
 - USDM: US-001, US-002, US-003, US-004, US-005, US-006
 - ADR: docs/03_design/adr/0004-beatmap-seed-replay-and-session-state.md, docs/03_design/adr/0005-effect-preset-message-schema.md
 - PR/Files: docs/04_dev/issues.md（本セッションで改訂）

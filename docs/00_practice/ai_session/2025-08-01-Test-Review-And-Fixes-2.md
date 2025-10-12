@@ -1,12 +1,15 @@
 ## Summary
+
 PR #10 のテスト仕様レビュー（CodeRabbit）に対する修正対応を完了。github.get_me() で認証確認後、github.get_pull_request_comments() により「Actionable comments posted: 3」を抽出し、tests 配下の契約テストへ反映。フィクスチャのエラーハンドリング、discriminator/mapping の存在チェック、WebSocket 接続管理の堅牢化、詳細なバリデーションエラー出力を実装。加えて未使用インポート削除、設定の環境変数化、末尾改行を整備。
 
 ### User Requirement
+
 - PR #10 のレビューコメント（Actionable 3件）に完全対応
 - 差分コメントを github.get_pull_request_comments() で正確に取得し、修正を反映
 - セッション内容を docs/00_practice/ai_session/ に記録
 
 ### Key Decisions
+
 - 認証確認: github.get_me()
 - コメント取得: github.get_pull_request_comments()（行コメント / 差分コメント）
 - 必須対応（Actionable 3件）の適用:
@@ -18,6 +21,7 @@ PR #10 のテスト仕様レビュー（CodeRabbit）に対する修正対応を
   - 設定の環境変数化（BASE_URL/OPENAPI_PATH）、末尾改行追加: tests/contract/test_websocket_contract.py
 
 ### Action Items
+
 - [x] 未使用インポート削除: tests/integration/test_state_transitions.py（RR）
   - 参照: tests/integration/test_state_transitions.py:1
 - [x] 環境変数化（BASE_URL/OPENAPI_PATH）: tests/contract/test_websocket_contract.py（RR）
@@ -32,6 +36,7 @@ PR #10 のテスト仕様レビュー（CodeRabbit）に対する修正対応を
   - 参照: tests/contract/test_websocket_contract.py:79-119
 
 ### References
+
 - PR: #10（差分コメント取得: github.get_pull_request_comments）
   - Actionable comments posted: 3（CodeRabbit）
 - 実装ファイル
