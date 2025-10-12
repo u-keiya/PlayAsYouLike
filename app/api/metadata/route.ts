@@ -31,7 +31,6 @@ const FALLBACK_METADATA: Record<string, UrlMetadata> = {
 const REQUEST_TIMEOUT_MS = 2800;
 const NOEMBED_ENDPOINT = "https://noembed.com/embed";
 const MAX_VIDEO_DURATION_SEC = 10 * 60;
-const MAX_VIDEO_DURATION_SEC = 10 * 60;
 
 function getErrorResponse(body: ErrorBody, status: number) {
   return NextResponse.json(body, {
@@ -256,9 +255,6 @@ export async function GET(request: NextRequest) {
     const normalizedMetadata = applyDurationPolicy(metadata);
 
     return NextResponse.json(normalizedMetadata, {
-    const normalizedMetadata = applyDurationPolicy(metadata);
-
-    return NextResponse.json(normalizedMetadata, {
       headers: {
         "Cache-Control": "no-store",
       },
@@ -279,8 +275,6 @@ export async function GET(request: NextRequest) {
     const fallback = FALLBACK_METADATA[videoId];
     if (fallback) {
       clearTimeout(timeoutId);
-      const normalizedFallback = applyDurationPolicy(fallback);
-      return NextResponse.json(normalizedFallback, {
       const normalizedFallback = applyDurationPolicy(fallback);
       return NextResponse.json(normalizedFallback, {
         headers: {
