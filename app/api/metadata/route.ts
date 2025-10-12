@@ -184,7 +184,8 @@ function applyDurationPolicy(metadata: UrlMetadata): UrlMetadata {
   const sanitizedDuration = Number.isFinite(metadata.durationSec)
     ? Math.max(0, Math.round(metadata.durationSec))
     : 0;
-  const shouldTrim = metadata.trimmed || sanitizedDuration > MAX_VIDEO_DURATION_SEC;
+  const shouldTrim =
+    metadata.trimmed || sanitizedDuration > MAX_VIDEO_DURATION_SEC;
 
   return {
     ...metadata,
