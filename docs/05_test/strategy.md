@@ -51,3 +51,11 @@ These tests require a running WebSocket server (or a mock equivalent) to be exec
 ## 6. Open Questions
 
 - **CI Setup for WebSocket Tests**: How should the test WebSocket server be managed in the CI environment (e.g., via Docker Compose, a background process, or a mock server library) to ensure these new contract and integration tests run reliably?
+
+## 7. Acceptance Test Execution
+
+- **US-001 Tutorial Flow (behave + Playwright)**
+  - Install dependencies: `pip install -r tests/e2e/requirements.txt`
+  - Install browser binaries once: `playwright install chromium`
+  - Run the scenario: `behave tests/e2e/US-001.feature`
+  - The step definitions boot the Next.js dev server automatically on `http://127.0.0.1:3100`.
