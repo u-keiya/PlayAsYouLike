@@ -183,7 +183,7 @@ export const sessionRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
         } catch (error) {
           request.log.warn(
             { err: error, sessionId },
-            "Failed to cache seed in Redis; seed still available in session"
+            "Failed to cache seed in Redis; seed still available in session",
           );
           // Continue - seed can be retrieved from sessionRepository if needed
         }
