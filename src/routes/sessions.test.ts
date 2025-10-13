@@ -1,8 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildApp } from "../app";
+import RedisMock from "ioredis-mock";
+import { buildApp, type BuildAppOptions } from "../app";
 import type { SessionCreateResponse } from "./sessions";
 import { UINT32_MAX } from "../utils/random";
 import * as beatmapGenerator from "../services/beatmap-generator";
+
+function createTestApp(overrides: Partial<BuildAppOptions> = {}) {
+  const redis = new RedisMock();
+  const app = buildApp({
+    redisClient: redis,
+    manageRedisLifecycle: true,
+    seedCache: { ttlSeconds: 900, namespace: "test" },
+    ...overrides,
+  });
+
+  return { app, redis };
+}
 
 describe("POST /sessions", () => {
   afterEach(() => {
@@ -10,7 +23,7 @@ describe("POST /sessions", () => {
   });
 
   it("creates a session with a provided seed and stores it", async () => {
-    const app = buildApp();
+    const { app } = createTestApp();
     await app.ready();
 
     const payload = {
@@ -40,6 +53,9 @@ describe("POST /sessions", () => {
       expect(stored).not.toBeNull();
       expect(stored?.seed).toBe(payload.seed);
       expect(stored?.url).toBe("https://example.com/song.mp3");
+      await expect(app.replayService.getSeed(body.sessionId)).resolves.toBe(
+        payload.seed,
+      );
 
       const secondResponse = await app.inject({
         method: "POST",
@@ -57,7 +73,7 @@ describe("POST /sessions", () => {
   });
 
   it("generates a random seed when omitted", async () => {
-    const app = buildApp();
+    const { app } = createTestApp();
     await app.ready();
 
     try {
@@ -79,13 +95,16 @@ describe("POST /sessions", () => {
       expect(app.sessionRepository.findById(body.sessionId)?.seed).toBe(
         body.seed,
       );
+      await expect(app.replayService.getSeed(body.sessionId)).resolves.toBe(
+        body.seed,
+      );
     } finally {
       await app.close();
     }
   });
 
   it("returns 422 when url is invalid", async () => {
-    const app = buildApp();
+    const { app } = createTestApp();
     await app.ready();
 
     try {
@@ -108,7 +127,7 @@ describe("POST /sessions", () => {
   });
 
   it("returns 503 when beatmap generation exceeds SLA", async () => {
-    const app = buildApp({ beatmapTimeoutMs: 5 });
+    const { app } = createTestApp({ beatmapTimeoutMs: 5 });
     await app.ready();
 
     vi.spyOn(beatmapGenerator, "generateBeatmap").mockImplementation(
