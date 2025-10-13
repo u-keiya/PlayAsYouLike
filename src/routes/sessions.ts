@@ -170,14 +170,6 @@ export const sessionRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           createdAt: new Date(),
           payload: response,
         });
-        fastify.sessionRepository.save({
-          sessionId,
-          url: normalizedUrl,
-          colorHex: body.colorHex,
-          seed,
-          createdAt: new Date(),
-          payload: response,
-        });
         try {
           await fastify.replayService.persistSeed(sessionId, seed);
         } catch (error) {
@@ -187,8 +179,6 @@ export const sessionRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           );
           // Continue - seed can be retrieved from sessionRepository if needed
         }
-
-        reply.status(201).send(response);
 
         reply.status(201).send(response);
       } catch (error) {
