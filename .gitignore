@@ -48,6 +48,6 @@ AGENTS.md
 
 .pnpm-store
 
-tests/.venv
-
-uv.lock
+**/uv.lock
+**/__pycache__/
+**/.venv/
