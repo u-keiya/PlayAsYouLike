@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package playasul.audio.v1;
+
+option java_multiple_files = true;
+option java_package = "com.playasul.audio.v1";
+
+// Audio analysis contract for US-005 Dynamic Visual FX.
+message AnalyzeTrackRequest {
+  // Remote audio resource for analysis (e.g., CDN URL).
+  string audio_url = 1;
+
+  // Optional identifier used for downstream traceability.
+  string session_id = 2;
+}
+
+message AnalyzeTrackResponse {
+  // Summary statistics extracted from the audio track.
+  AnalysisSummary summary = 1;
+
+  // Structural breakdown of the track (intro, verse, chorus, etc.).
+  repeated SectionBreakdown sections = 2;
+}
+
+message AnalysisSummary {
+  // Estimated tempo in beats per minute.
+  double bpm = 1;
+
+  // Root-mean-square energy level (0-1 normalized).
+  double energy = 2;
+
+  // Current beat position classification (US-005 beat mapping).
+  BeatPosition beat_position = 3;
+
+  // Weighted spectral centroid in Hz.
+  double spectral_centroid = 4;
+
+  // Key detection results with confidence.
+  KeyEstimate key = 5;
+}
+
+enum BeatPosition {
+  BEAT_POSITION_UNSPECIFIED = 0;
+  ON_BEAT = 1;
+  OFF_BEAT = 2;
+}
+
+message KeyEstimate {
+  // Musical key tonic representation (e.g., "A", "C#").
+  string tonic = 1;
+
+  // Mode descriptor (e.g., "major", "minor", "dorian").
+  string mode = 2;
+
+  // Confidence score between 0.0 and 1.0.
+  double confidence = 3;
+
+  // Optional chord progression labels aligned to detected segments.
+  repeated string chord_progression = 4;
+}
+
+message SectionBreakdown {
+  // Label describing the musical segment (intro, verse, chorus, etc.).
+  string label = 1;
+
+  // Start timestamp in seconds from beginning of the track.
+  double start_sec = 2;
+
+  // End timestamp in seconds from beginning of the track.
+  double end_sec = 3;
+
+  // Average energy for this section (0-1 normalized).
+  double average_energy = 4;
+}
+
+service AudioAnalysisService {
+  // Performs one-shot analysis returning consolidated track features.
+  rpc AnalyzeTrack(AnalyzeTrackRequest) returns (AnalyzeTrackResponse);
+}
