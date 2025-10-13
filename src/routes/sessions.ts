@@ -170,7 +170,25 @@ export const sessionRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           createdAt: new Date(),
           payload: response,
         });
-        await fastify.replayService.persistSeed(sessionId, seed);
+        fastify.sessionRepository.save({
+          sessionId,
+          url: normalizedUrl,
+          colorHex: body.colorHex,
+          seed,
+          createdAt: new Date(),
+          payload: response,
+        });
+        try {
+          await fastify.replayService.persistSeed(sessionId, seed);
+        } catch (error) {
+          request.log.warn(
+            { err: error, sessionId },
+            "Failed to cache seed in Redis; seed still available in session"
+          );
+          // Continue - seed can be retrieved from sessionRepository if needed
+        }
+
+        reply.status(201).send(response);
 
         reply.status(201).send(response);
       } catch (error) {
