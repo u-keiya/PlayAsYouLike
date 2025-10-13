@@ -9,12 +9,12 @@ This repository now provides a lightweight Python scaffold for the gRPC-based au
 
 ## Package Layout
 
-| Path | Purpose |
-| --- | --- |
-| `audio_svc/proto/audio_analysis_pb2.py` | Dataclass mirror of the proto schema used until `grpcio-tools` can generate bindings in CI |
-| `audio_svc/proto/audio_analysis_pb2_grpc.py` | Minimal service base class & registration helper |
-| `audio_svc/server.py` | Deterministic placeholder implementation and gRPC server factory |
-| `tests/unit/audio_svc/test_server.py` | Unit tests covering determinism and dependency guards |
+| Path                                         | Purpose                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `audio_svc/proto/audio_analysis_pb2.py`      | Dataclass mirror of the proto schema used until `grpcio-tools` can generate bindings in CI |
+| `audio_svc/proto/audio_analysis_pb2_grpc.py` | Minimal service base class & registration helper                                           |
+| `audio_svc/server.py`                        | Deterministic placeholder implementation and gRPC server factory                           |
+| `tests/unit/audio_svc/test_server.py`        | Unit tests covering determinism and dependency guards                                      |
 
 ## Local Development
 
