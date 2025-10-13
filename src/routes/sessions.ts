@@ -170,6 +170,7 @@ export const sessionRoutes: FastifyPluginAsyncTypebox = async (fastify) => {
           createdAt: new Date(),
           payload: response,
         });
+        await fastify.replayService.persistSeed(sessionId, seed);
 
         reply.status(201).send(response);
       } catch (error) {
