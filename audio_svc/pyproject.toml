@@ -1,0 +1,11 @@
+[project]
+name = "audio-svc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "grpcio==1.66.1",
+    "grpcio-tools==1.66.1",
+    "protobuf==5.29.0",
+]

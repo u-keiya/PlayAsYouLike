@@ -49,3 +49,5 @@ AGENTS.md
 .pnpm-store
 
 tests/.venv
+
+uv.lock
