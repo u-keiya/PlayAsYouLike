@@ -130,8 +130,8 @@ paths:
                 $ref: "#/components/schemas/Error"
   /sessions:
     post:
-      summary: Create new game session (#US-001)
-      x-latency-ms: 300000 # ≤300 s SLA (#US-001)
+      summary: Create new game session (#US-003)
+      x-latency-ms: 300000 # ≤300 s SLA (#US-003)
       requestBody:
         required: true
         content:
@@ -757,6 +757,7 @@ components:
       type: object
       required:
         - sessionId
+        - seed
         - beatmap
         - audioUrl
         - effectsPreset
@@ -765,6 +766,9 @@ components:
         sessionId:
           type: string
           format: uuid
+        seed:
+          type: integer
+          description: Seed used for beatmap generation
         beatmap:
           $ref: "#/components/schemas/Beatmap"
         audioUrl:
