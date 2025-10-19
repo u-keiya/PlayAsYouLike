@@ -8,8 +8,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { SessionCreateResponse } from "../types/session";
+import {
+  buildStoredSession,
+  loadStoredSession,
+  saveStoredSession,
+} from "./lib/session-storage";
 
 export const TUTORIAL_STORAGE_KEY = "play-as-you-like:tutorial-seen:v1";
+const DEFAULT_COLOR_HEX = "#38BDF8";
 
 type UrlMetadata = {
   title: string;
@@ -43,6 +50,7 @@ export default function HomePage() {
   const [metadata, setMetadata] = useState<UrlMetadata | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const metadataRequestControllerRef = useRef<AbortController | null>(null);
   const latestRequestIdRef = useRef(0);
 
@@ -217,7 +225,90 @@ export default function HomePage() {
     setTutorialOpen(true);
   };
 
-  const isPlayEnabled = Boolean(metadata) && !isFetchingMetadata;
+  const handlePlay = useCallback(async () => {
+    if (!metadata) {
+      return;
+    }
+
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+      setErrorMessage("YouTube の URL を入力してください。");
+      return;
+    }
+
+    const storedSession = loadStoredSession();
+    const payload: {
+      url: string;
+      colorHex: string;
+      seed?: number;
+    } = {
+      url: trimmedUrl,
+      colorHex: DEFAULT_COLOR_HEX,
+    };
+
+    if (storedSession && storedSession.url === trimmedUrl) {
+      payload.seed = storedSession.seed;
+    }
+
+    setIsCreatingSession(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      let body: unknown = null;
+
+      try {
+        body = (await response.json()) as unknown;
+      } catch {
+        body = null;
+      }
+
+      if (!response.ok) {
+        const message =
+          typeof (body as { message?: unknown })?.message === "string"
+            ? (body as { message: string }).message
+            : "セッションの開始に失敗しました。";
+
+        setErrorMessage(message);
+        return;
+      }
+
+      if (
+        typeof (body as { sessionId?: unknown })?.sessionId !== "string" ||
+        typeof (body as { seed?: unknown })?.seed !== "number"
+      ) {
+        setErrorMessage("セッションの開始に失敗しました。");
+        return;
+      }
+
+      const session = body as SessionCreateResponse;
+      saveStoredSession(
+        buildStoredSession(session, {
+          url: payload.url,
+          colorHex: payload.colorHex,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      setErrorMessage("セッションの開始中にエラーが発生しました。");
+    } finally {
+      setIsCreatingSession(false);
+    }
+  }, [metadata, url]);
+
+  const isPlayEnabled =
+    Boolean(metadata) && !isFetchingMetadata && !isCreatingSession;
 
   return (
     <div className="app">
@@ -276,8 +367,9 @@ export default function HomePage() {
                 className="app__primary-action"
                 disabled={!isPlayEnabled}
                 aria-disabled={!isPlayEnabled}
+                onClick={handlePlay}
               >
-                Play
+                {isCreatingSession ? "Starting..." : "Play"}
               </button>
             </div>
             <div
