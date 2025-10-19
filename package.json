@@ -15,7 +15,8 @@
     "fix:lint-fix": "eslint --fix .",
     "start": "next start",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "proto:generate": "buf generate"
   },
   "dependencies": {
     "@fastify/type-provider-typebox": "^6.0.0",
@@ -27,6 +28,13 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.58.0",
+    "@bufbuild/protobuf": "^1.10.0",
+    "@bufbuild/protoc-gen-es": "^1.10.0",
+    "@connectrpc/connect": "^1.7.0",
+    "@connectrpc/connect-node": "^1.7.0",
+    "@connectrpc/connect-web": "^1.7.0",
+    "@connectrpc/protoc-gen-connect-es": "^1.7.0",
     "@eslint/js": "^9.36.0",
     "@next/eslint-plugin-next": "^15.5.4",
     "@rushstack/eslint-patch": "^1.13.0",

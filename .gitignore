@@ -51,3 +51,5 @@ AGENTS.md
 **/uv.lock
 **/__pycache__/
 **/.venv/
+
+.buf-cache/

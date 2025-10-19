@@ -49,3 +49,8 @@ This repository now provides a librosa-backed Python implementation for the gRPC
    ```
 
 The helper `audio_svc.build_grpc_server()` raises a descriptive `RuntimeError` when the `grpcio` dependency is missing. CI executes the same unittest invocation to ensure the analyser and dependency guards stay healthy.
+
+## TypeScript Client Generation
+
+- `BUF_CACHE_DIR=.buf-cache pnpm proto:generate` で `src/gen/audio/` 以下に TypeScript クライアントが再生成されます。
+- フロントエンド側では `src/services/audio-analysis-client.ts` の `createAudioAnalysisClient` から gRPC-web 経由で AudioAnalysisService を呼び出せます。
