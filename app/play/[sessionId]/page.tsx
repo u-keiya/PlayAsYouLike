@@ -91,8 +91,8 @@ function drawScene(
       return;
     }
 
-    const lane = Math.max(0, Math.min(note.lane, LANE_COUNT - 1));
-    const laneCenter = lane * laneWidth + laneWidth / 2;
+    const laneIndex = Math.max(0, Math.min(note.lane - 1, LANE_COUNT - 1));
+    const laneCenter = laneIndex * laneWidth + laneWidth / 2;
     const travelHeight = JUDGE_LINE_Y - 60;
     const clampedProgress = Math.max(0, Math.min(progress, 1));
     const y = JUDGE_LINE_Y - clampedProgress * travelHeight;
