@@ -18,6 +18,7 @@ import {
 
 export const TUTORIAL_STORAGE_KEY = "play-as-you-like:tutorial-seen:v1";
 const DEFAULT_COLOR_HEX = "#38BDF8";
+const DEFAULT_COLOR_HEX = "#38BDF8";
 
 type UrlMetadata = {
   title: string;
@@ -51,6 +52,7 @@ export default function HomePage() {
   const [metadata, setMetadata] = useState<UrlMetadata | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const metadataRequestControllerRef = useRef<AbortController | null>(null);
   const latestRequestIdRef = useRef(0);
@@ -380,7 +382,9 @@ export default function HomePage() {
                 disabled={!isPlayEnabled}
                 aria-disabled={!isPlayEnabled}
                 onClick={handlePlay}
+                onClick={handlePlay}
               >
+                {isCreatingSession ? "Starting..." : "Play"}
                 {isCreatingSession ? "Starting..." : "Play"}
               </button>
             </div>
