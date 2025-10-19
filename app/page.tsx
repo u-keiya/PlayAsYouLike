@@ -18,7 +18,6 @@ import {
 
 export const TUTORIAL_STORAGE_KEY = "play-as-you-like:tutorial-seen:v1";
 const DEFAULT_COLOR_HEX = "#38BDF8";
-const DEFAULT_COLOR_HEX = "#38BDF8";
 
 type UrlMetadata = {
   title: string;
