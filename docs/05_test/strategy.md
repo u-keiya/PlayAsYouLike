@@ -59,3 +59,7 @@ These tests require a running WebSocket server (or a mock equivalent) to be exec
   - Install browser binaries once: `playwright install chromium`
   - Run the scenario: `behave tests/e2e/US-001.feature`
   - The step definitions boot the Next.js dev server automatically on `http://127.0.0.1:3100`.
+- **US-003 Canvas Play Flow (behave + Playwright)**
+  - Reuse the same environment setup as US-001.
+  - Exercises `/api/sessions` stubbing, Canvas note rendering, key judgement, and result propagation.
+  - Run the scenario: `behave tests/e2e/US-003.feature`

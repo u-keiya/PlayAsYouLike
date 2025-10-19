@@ -15,6 +15,7 @@ import {
   loadStoredSession,
   saveStoredSession,
 } from "./lib/session-storage";
+import { saveActiveSession } from "./lib/active-session-storage";
 
 export const TUTORIAL_STORAGE_KEY = "play-as-you-like:tutorial-seen:v1";
 const DEFAULT_COLOR_HEX = "#38BDF8";
@@ -304,6 +305,7 @@ export default function HomePage() {
           colorHex: payload.colorHex,
         }),
       );
+      saveActiveSession(session);
 
       router.push(`/play/${session.sessionId}`);
     } catch (error) {
@@ -380,9 +382,7 @@ export default function HomePage() {
                 disabled={!isPlayEnabled}
                 aria-disabled={!isPlayEnabled}
                 onClick={handlePlay}
-                onClick={handlePlay}
               >
-                {isCreatingSession ? "Starting..." : "Play"}
                 {isCreatingSession ? "Starting..." : "Play"}
               </button>
             </div>
