@@ -52,7 +52,6 @@ export default function HomePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const metadataRequestControllerRef = useRef<AbortController | null>(null);
   const latestRequestIdRef = useRef(0);
   const router = useRouter();
